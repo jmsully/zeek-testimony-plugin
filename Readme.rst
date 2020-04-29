@@ -1,0 +1,84 @@
+
+Zeek::Testimony
+==============
+
+This plugin provides native Testimony support for Zeek.
+Testimony is a single-machine, multi-process architecture for sharing AF_PACKET data across processes. 
+(https://github.com/google/testimony).
+
+Installation
+------------
+
+Package Manager
+```````````````
+The plugin is available as package for the `Zeek Package Manager
+<https://github.com/zeek/package-manager>`_ and can be installed using the
+following command::
+
+    zkg install zeek-testimony-plugin
+
+Manual Install
+``````````````
+The following will compile and install the AF_Packet plugin alongside Zeek,
+assuming it can find the kernel headers in a standard location::
+
+    # ./configure && make && make install
+
+If everything built and installed correctly, you should see this::
+
+    # zeek -NN Zeek::Testimony
+    Zeek::Testimony - Packet acquisition from Google Testimony Unix socket (dynamic, no version information)
+    [Packet Source] TestimonyReader (interface prefix "testimony"; supports live input)
+
+
+Usage
+-----
+
+Once installed, you can use Testimony sockets by prefixing them with
+``testimony::`` on the command line. For example, to use Testimony to get
+packets from socket``/tmp/testimony.sock``::
+
+    # zeek -i testimony::/tmp/testimony.sock
+
+Environment variables are used for setting fanout index::
+
+    # TESTIMONY_FANOUT_ID=2 /usr/local/zeek/bin/zeek -i testimony::/tmp/testimony.sock
+    
+Usage with ``zeekctl``
+---------------------
+
+To use the AF_Packet plugin with ``zeekctl``, the ``custom`` load balance method
+can be utilized. The following shows an exemplary configuration ::
+
+    [manager]
+    type=manager
+    host=localhost
+
+    [proxy-1]
+    type=proxy
+    host=localhost
+
+    [worker-1]
+    type=worker
+    host=localhost
+    interface=testimony::/tmp/testimony.sock
+    lb_method=custom
+    lb_procs=1
+    pin_cpus=1
+    env_vars=TESTIMONY_FANOUT_ID=0
+
+    [worker-2]
+    type=worker
+    host=localhost
+    interface=testimony::/tmp/testimony.sock
+    lb_method=custom
+    lb_procs=1
+    pin_cpus=2
+    env_vars=TESTIMONY_FANOUT_ID=1
+
+If all interfaces using ``lb_method=custom`` should be configured for
+Testimony, the prefix can be globally definied by adding the following
+line to ``zeekctl.conf``::
+
+  lb_custom.InterfacePrefix=testimony::
+
