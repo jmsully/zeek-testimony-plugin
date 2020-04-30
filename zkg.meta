@@ -2,7 +2,7 @@
 description = This plugin provides Testimony support for Zeek.
 tags = zeek plugin, packet source, testimony
 plugin_dir = build/Zeek_Testimony.tgz
-build_command = ./configure && make
+build_command = ./configure && make -C build
 depends =
   zkg >=2.0
   zeek >=3.0.0
