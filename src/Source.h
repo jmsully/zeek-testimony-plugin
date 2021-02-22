@@ -9,6 +9,9 @@ extern "C" {
 }
 
 #include <queue>
+#include <mutex>
+#include <atomic>
+#include <thread>
 #include <sys/types.h> // for u_char
 
 namespace iosource {
@@ -33,11 +36,18 @@ protected:
 
 private:
 	void OpenLive();
+	void AddPacketsToTemporaryQueue();
+
 	::testimony td;
 	::testimony_iter td_iter;
 	timeval curr_timeval;
 	tpacket3_hdr *curr_packet;
-	std::queue<tpacket3_hdr *> queue;
+	std::queue<tpacket3_hdr *> packets;
+	std::queue<tpacket3_hdr *> temp_packets;
+
+	std::atomic<bool> running;
+	std::mutex queue_access_mutex;
+	std::thread fill_queue_thread{};
 
 	Properties props;
 	Stats stats;

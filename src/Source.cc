@@ -22,6 +22,7 @@ TestimonySource::TestimonySource(const std::string& path, bool is_live)
 	props.path = path;
 	props.is_live = is_live;
 	curr_packet = NULL;
+	running = true;
 	}
 
 void TestimonySource::Open()
@@ -31,8 +32,9 @@ void TestimonySource::Open()
 
 void TestimonySource::Close()
 	{
+	running = false;
+	fill_queue_thread.join();
 	testimony_close(td);
-
 	Closed();
 	}
 
@@ -69,36 +71,33 @@ void TestimonySource::OpenLive()
 	props.link_type = DLT_EN10MB;
 	props.is_live = true;
 
+	fill_queue_thread = std::thread{&TestimonySource::AddPacketsToTemporaryQueue, this};
+
 	Opened(props);
 	}
 
-bool TestimonySource::ExtractNextPacket(Packet* pkt)
+
+void TestimonySource::AddPacketsToTemporaryQueue()
 	{
-	if ( ! queue.empty() )
+	while (running) 
 		{
-		curr_packet = queue.front();
-		queue.pop();
-
-		curr_timeval.tv_sec = curr_packet->tp_sec;
-		curr_timeval.tv_usec = curr_packet->tp_nsec / 1000;
-		pkt->Init(props.link_type, &curr_timeval, curr_packet->tp_snaplen, curr_packet->tp_len, (const u_char *) curr_packet + curr_packet->tp_mac);
-
-		return true;
-		} else {
+		
+		std::lock_guard<std::mutex> lk(queue_access_mutex);
+			
 		const tpacket_block_desc *block = NULL;
 		const tpacket3_hdr *packet;
 
-		int res = testimony_get_block(td, 100, &block);
+		int res = testimony_get_block(td, -1, &block);
 		if ( res == 0 && !block ) {
 			// Timeout
-			return false;
+			continue;
 		}
 
 		if ( res < 0 )
 			{
 			Error(fmt("testimony_get_block: %s, %s", testimony_error(td), strerror(-res)));
 			Close();
-			return false;
+			running = false;
 			}
 
 		int cnt = 0;
@@ -109,18 +108,41 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 			// Queue the packet
 			char *data = new char[packet->tp_len + packet->tp_mac];
 			memcpy(data, packet, packet->tp_len + packet->tp_mac);
-			queue.push((tpacket3_hdr *) data);
-
+			
+			temp_packets.emplace((tpacket3_hdr *) data);
+			
 			++stats.received;
 			++cnt;
 			stats.bytes_received += packet->tp_len;
 			}
 
 		testimony_return_block(td, block);
-
-		// Try again
-		return ExtractNextPacket(pkt);
 		}
+}
+
+bool TestimonySource::ExtractNextPacket(Packet* pkt)
+	{
+	if ( ! packets.empty() )
+		{
+		curr_packet = packets.front();
+		packets.pop();
+
+		curr_timeval.tv_sec = curr_packet->tp_sec;
+		curr_timeval.tv_usec = curr_packet->tp_nsec / 1000;
+		pkt->Init(props.link_type, &curr_timeval, curr_packet->tp_snaplen, curr_packet->tp_len, (const u_char *) curr_packet + curr_packet->tp_mac);
+
+		return true;
+		} 
+	else 
+		{
+			std::lock_guard<std::mutex> lk(queue_access_mutex);
+			if(!temp_packets.empty())
+			{
+			packets = std::move(temp_packets);
+			return ExtractNextPacket(pkt);
+			}
+		}
+		return false;
 	}
 
 void TestimonySource::DoneWithPacket()
