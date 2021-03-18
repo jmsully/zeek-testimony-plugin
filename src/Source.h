@@ -3,6 +3,7 @@
 #pragma once
 
 #include <iosource/PktSrc.h>
+#include "zeek-compat.h"
 
 extern "C" {
 #include <testimony.h>
@@ -14,10 +15,9 @@ extern "C" {
 #include <thread>
 #include <sys/types.h> // for u_char
 
-namespace iosource {
-namespace testimony {
+namespace ZEEK_IOSOURCE_NS::testimony {
 
-class TestimonySource : public iosource::PktSrc {
+class TestimonySource : public ZEEK_IOSOURCE_NS::PktSrc {
 public:
 	TestimonySource(const std::string& path, bool is_live);
 	~TestimonySource() override;
@@ -53,5 +53,4 @@ private:
 	Stats stats;
 };
 
-}
-}
+} //namespace iosource

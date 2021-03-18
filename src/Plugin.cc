@@ -1,26 +1,22 @@
 // See the file  in the main distribution directory for copyright.
 
 #include "Source.h"
+#include "Plugin.h"
+#include <zeek/plugin/Plugin.h>
+#include <zeek/iosource/Component.h>
 
-#include <plugin/Plugin.h>
-#include <iosource/Component.h>
+namespace ZEEK_PLUGIN_NS { namespace Zeek_Testimony { Plugin plugin; } }
 
-namespace plugin {
-namespace Zeek_Testimony {
+using namespace ZEEK_PLUGIN_NS::Zeek_Testimony;
+using namespace ZEEK_IOSOURCE_NS;
 
-class Plugin : public plugin::Plugin {
-public:
-	plugin::Configuration Configure()
+
+ZEEK_PLUGIN_NS::Configuration Plugin::Configure()
 		{
-		AddComponent(new ::iosource::PktSrcComponent("TestimonyReader", "testimony", ::iosource::PktSrcComponent::LIVE, ::iosource::testimony::TestimonySource::Instantiate));
+		AddComponent(new PktSrcComponent("TestimonyReader", "testimony", PktSrcComponent::LIVE, testimony::TestimonySource::Instantiate));
 
-		plugin::Configuration config;
+		ZEEK_PLUGIN_NS::Configuration config;
 		config.name = "Zeek::Testimony";
 		config.description = "Packet acquisition from Google Testimony Unix socket";
 		return config;
 		}
-} plugin;
-
-}
-}
-

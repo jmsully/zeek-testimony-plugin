@@ -1,6 +1,6 @@
 // See the file  in the main distribution directory for copyright.
 
-#include "zeek-config.h"
+#include <zeek/zeek-config.h>
 
 #include "Source.h"
 #include <iosource/Packet.h>
@@ -10,7 +10,7 @@
 
 #include <Event.h>
 
-using namespace iosource::testimony;
+using namespace ZEEK_IOSOURCE_NS::testimony;
 
 TestimonySource::~TestimonySource()
 	{
@@ -47,7 +47,7 @@ void TestimonySource::OpenLive()
 	res = testimony_connect(&td, props.path.c_str());
 	if ( res < 0 )
 		{
-		Error(fmt("testimony_connect: %s", strerror(-res)));
+		Error("testimony_connect: " + std::string(strerror(-res)));
 		return;
 		}
 
@@ -60,7 +60,7 @@ void TestimonySource::OpenLive()
 	res = testimony_init(td);
 	if ( res < 0 )
 		{
-		Error(fmt("testimony_init: %s, %s", testimony_error(td), strerror(-res)));
+		Error("testimony_init: " + std::string(testimony_error(td)) + strerror(-res));
 		return;
 		}
 
@@ -81,8 +81,6 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 	{
 	while (running) 
 		{
-		
-		std::lock_guard<std::mutex> lk(queue_access_mutex);
 			
 		const tpacket_block_desc *block = NULL;
 		const tpacket3_hdr *packet;
@@ -95,7 +93,7 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 
 		if ( res < 0 )
 			{
-			Error(fmt("testimony_get_block: %s, %s", testimony_error(td), strerror(-res)));
+			Error("testimony_get_block:" + std::string(testimony_error(td)) + strerror(-res));
 			Close();
 			running = false;
 			}
@@ -103,6 +101,7 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 		int cnt = 0;
 
 		testimony_iter_reset(td_iter, block);
+		queue_access_mutex.lock();
 		while ( (packet = testimony_iter_next(td_iter)) )
 			{
 			// Queue the packet
@@ -115,7 +114,7 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 			++cnt;
 			stats.bytes_received += packet->tp_len;
 			}
-
+		queue_access_mutex.unlock();
 		testimony_return_block(td, block);
 		}
 }
@@ -135,12 +134,13 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 		} 
 	else 
 		{
-			std::lock_guard<std::mutex> lk(queue_access_mutex);
+			queue_access_mutex.lock();
 			if(!temp_packets.empty())
 			{
 			packets = std::move(temp_packets);
-			return ExtractNextPacket(pkt);
+			//return ExtractNextPacket(pkt);
 			}
+			queue_access_mutex.unlock();
 		}
 		return false;
 	}
@@ -168,15 +168,17 @@ bool TestimonySource::SetFilter(int index)
 
 void TestimonySource::Statistics(Stats* s)
 	{
+	queue_access_mutex.lock();
 	s->received = stats.received;
 	s->bytes_received = stats.bytes_received;
 
 	// TODO: get this information from the daemon
 	s->link = stats.received;
 	s->dropped = 0;
+	queue_access_mutex.unlock();
 	}
 
-iosource::PktSrc* TestimonySource::Instantiate(const std::string& path, bool is_live)
+ZEEK_IOSOURCE_NS::PktSrc* TestimonySource::Instantiate(const std::string& path, bool is_live)
 	{
 	return new TestimonySource(path, is_live);
 	}
