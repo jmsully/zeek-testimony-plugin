@@ -2,7 +2,7 @@
 
 #include <zeek/zeek-config.h>
 
-#include "Source.h"
+#include "TestimonySource.h"
 #include <iosource/Packet.h>
 #include <iosource/BPF_Program.h>
 
@@ -32,8 +32,9 @@ void TestimonySource::Open()
 
 void TestimonySource::Close()
 	{
+	Error("testimony loop stopped:");
 	running = false;
-	fill_queue_thread.join();
+	temporary_queue_writer.Stop();
 	testimony_close(td);
 	Closed();
 	}
@@ -71,7 +72,8 @@ void TestimonySource::OpenLive()
 	props.link_type = DLT_EN10MB;
 	props.is_live = true;
 
-	fill_queue_thread = std::thread{&TestimonySource::AddPacketsToTemporaryQueue, this};
+	temporary_queue_writer.SetTestimonySource([this] () { this->AddPacketsToTemporaryQueue(); });
+	temporary_queue_writer.StartThread();
 
 	Opened(props);
 	}
@@ -85,7 +87,7 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 		const tpacket_block_desc *block = NULL;
 		const tpacket3_hdr *packet;
 
-		int res = testimony_get_block(td, -1, &block);
+		int res = testimony_get_block(td, 1000, &block);
 		if ( res == 0 && !block ) {
 			// Timeout
 			continue;
@@ -94,8 +96,8 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 		if ( res < 0 )
 			{
 			Error("testimony_get_block:" + std::string(testimony_error(td)) + strerror(-res));
-			Close();
 			running = false;
+			Close();
 			}
 
 		int cnt = 0;
@@ -117,7 +119,8 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 		queue_access_mutex.unlock();
 		testimony_return_block(td, block);
 		}
-}
+	Error("testimony loop stopped:");
+	}
 
 bool TestimonySource::ExtractNextPacket(Packet* pkt)
 	{
@@ -136,10 +139,11 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 		{
 			queue_access_mutex.lock();
 			if(!temp_packets.empty())
-			{
-			packets = std::move(temp_packets);
-			//return ExtractNextPacket(pkt);
-			}
+				{
+				packets = std::move(temp_packets);
+				queue_access_mutex.unlock();
+				return ExtractNextPacket(pkt);
+				}
 			queue_access_mutex.unlock();
 		}
 		return false;

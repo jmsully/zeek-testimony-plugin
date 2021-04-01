@@ -1,6 +1,6 @@
 // See the file  in the main distribution directory for copyright.
 
-#include "Source.h"
+#include "TestimonySource.h"
 #include "Plugin.h"
 #include <zeek/plugin/Plugin.h>
 #include <zeek/iosource/Component.h>

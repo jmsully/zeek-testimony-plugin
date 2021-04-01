@@ -4,6 +4,7 @@
 
 #include <iosource/PktSrc.h>
 #include "zeek-compat.h"
+#include "TemporaryQueueWriter/TemporaryQueueWriter.h"
 
 extern "C" {
 #include <testimony.h>
@@ -24,6 +25,8 @@ public:
 
 	static PktSrc* Instantiate(const std::string& path, bool is_live);
 
+	void AddPacketsToTemporaryQueue();
+
 protected:
 	// PktSrc interface.
 	void Open() override;
@@ -36,7 +39,6 @@ protected:
 
 private:
 	void OpenLive();
-	void AddPacketsToTemporaryQueue();
 
 	::testimony td;
 	::testimony_iter td_iter;
@@ -47,7 +49,7 @@ private:
 
 	std::atomic<bool> running;
 	std::mutex queue_access_mutex;
-	std::thread fill_queue_thread{};
+	TemporaryQueueWriter temporary_queue_writer;
 
 	Properties props;
 	Stats stats;

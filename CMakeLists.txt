@@ -6,7 +6,8 @@ include(ZeekPlugin)
 
 zeek_plugin_begin(Zeek Testimony)
 zeek_plugin_cc(src/Plugin.cc)
-zeek_plugin_cc(src/Source.cc)
+zeek_plugin_cc(src/TestimonySource.cc)
+zeek_plugin_cc(src/TemporaryQueueWriter/TemporaryQueueWriter.cc)
 zeek_plugin_link_library(-ltestimony)
 zeek_plugin_end()
 
