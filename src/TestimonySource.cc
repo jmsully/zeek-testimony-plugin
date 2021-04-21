@@ -17,14 +17,6 @@ TestimonySource::~TestimonySource()
 	Close();
 	}
 
-TestimonySource::TestimonySource(const std::string& path, bool is_live)
-	{
-	props.path = path;
-	props.is_live = is_live;
-	curr_packet = NULL;
-	running = true;
-	}
-
 void TestimonySource::Open()
 	{
 	OpenLive();
@@ -32,9 +24,7 @@ void TestimonySource::Open()
 
 void TestimonySource::Close()
 	{
-	Error("testimony loop stopped:");
-	running = false;
-	temporary_queue_writer.Stop();
+	//temporary_queue_writer will be deleted automatically by thread manager
 	testimony_close(td);
 	Closed();
 	}
@@ -71,9 +61,11 @@ void TestimonySource::OpenLive()
 
 	props.link_type = DLT_EN10MB;
 	props.is_live = true;
-
-	temporary_queue_writer.SetTestimonySource([this] () { this->AddPacketsToTemporaryQueue(); });
-	temporary_queue_writer.StartThread();
+	
+	temporary_queue_writer = new TemporaryQueueWriter();
+	temporary_queue_writer->SetTestimonySource([this] () { this->AddPacketsToTemporaryQueue(); });
+	temporary_queue_writer->SetStoppingProcess([this] () { this->running = false; } );
+	temporary_queue_writer->StartThread();
 
 	Opened(props);
 	}
@@ -87,8 +79,12 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 		const tpacket_block_desc *block = NULL;
 		const tpacket3_hdr *packet;
 
-		int res = testimony_get_block(td, 1000, &block);
+		int res = testimony_get_block(td, 0, &block);
 		if ( res == 0 && !block ) {
+			if (!running) {
+				return;
+			}
+
 			// Timeout
 			continue;
 		}

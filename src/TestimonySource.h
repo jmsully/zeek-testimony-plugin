@@ -20,7 +20,13 @@ namespace ZEEK_IOSOURCE_NS::testimony {
 
 class TestimonySource : public ZEEK_IOSOURCE_NS::PktSrc {
 public:
-	TestimonySource(const std::string& path, bool is_live);
+	TestimonySource(const std::string& path, bool is_live)
+		{
+		props.path = path;
+		props.is_live = is_live;
+		curr_packet = NULL;
+		running = true;
+		}
 	~TestimonySource() override;
 
 	static PktSrc* Instantiate(const std::string& path, bool is_live);
@@ -49,7 +55,7 @@ private:
 
 	std::atomic<bool> running;
 	std::mutex queue_access_mutex;
-	TemporaryQueueWriter temporary_queue_writer;
+	TemporaryQueueWriter *temporary_queue_writer;
 
 	Properties props;
 	Stats stats;

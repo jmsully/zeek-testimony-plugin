@@ -8,11 +8,6 @@ void TemporaryQueueWriter::OnWaitForStop(){
 
 }
 
-void TemporaryQueueWriter::Stop() {
-	//SignalStop();
-	//WaitForStop();
-}
-
 void TemporaryQueueWriter::StartThread() {
     Start();
 }
