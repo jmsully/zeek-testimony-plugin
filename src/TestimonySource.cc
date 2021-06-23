@@ -111,6 +111,7 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 			++stats.received;
 			++cnt;
 			stats.bytes_received += packet->tp_len;
+			delete[] data;  //asd
 			}
 		queue_access_mutex.unlock();
 		testimony_return_block(td, block);
