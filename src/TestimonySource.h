@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <iosource/PktSrc.h>
+#include <zeek/iosource/PktSrc.h>
 #include "zeek-compat.h"
 #include "TemporaryQueueWriter/TemporaryQueueWriter.h"
 

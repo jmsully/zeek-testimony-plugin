@@ -3,12 +3,12 @@
 #include <zeek/zeek-config.h>
 
 #include "TestimonySource.h"
-#include <iosource/Packet.h>
-#include <iosource/BPF_Program.h>
+#include <zeek/iosource/Packet.h>
+#include <zeek/iosource/BPF_Program.h>
 
 #include <unistd.h>
 
-#include <Event.h>
+#include <zeek/Event.h>
 
 using namespace ZEEK_IOSOURCE_NS::testimony;
 
@@ -103,7 +103,7 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 		while ( (packet = testimony_iter_next(td_iter)) )
 			{
 			// Queue the packet
-			char *data = new char[packet->tp_len + packet->tp_mac];
+			char *data = new char[packet->tp_len + packet->tp_mac]; // 0 bytes alloc`d inside block of size 144 
 			memcpy(data, packet, packet->tp_len + packet->tp_mac);
 			
 			temp_packets.emplace((tpacket3_hdr *) data);
@@ -149,7 +149,7 @@ void TestimonySource::DoneWithPacket()
 	{
 	if ( curr_packet )
 		{
-		delete curr_packet;
+		delete curr_packet; 				//mismatched free/delate/delate[]
 		curr_packet = NULL;
 		}
 	}

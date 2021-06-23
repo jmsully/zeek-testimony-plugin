@@ -13,10 +13,16 @@
 #define ZEEK_PLUGIN_NS zeek::plugin
 #define ZEEK_IOSOURCE_NS iosource
 
-#elif ZEEK_VERSION_NUMBER >= 40000
+#elif ZEEK_VERSION_NUMBER >= 40000 && ZEEK_VERSION_NUMBER < 40100
+
+#define ZEEK_PLUGIN_NS zeek::plugin
+#define ZEEK_IOSOURCE_NS iosource
+
+#elif ZEEK_VERSION_NUMBER >= 40100
 
 #define ZEEK_PLUGIN_NS zeek::plugin
 #define ZEEK_IOSOURCE_NS zeek::iosource
+
 
 #endif
 #endif
