@@ -137,7 +137,7 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 			queue_access_mutex.lock();
 			if(!temp_packets.empty())
 				{
-				packets = std::move(temp_packets);
+				std::swap(packets, temp_packets);
 				queue_access_mutex.unlock();
 				return ExtractNextPacket(pkt);
 				}
