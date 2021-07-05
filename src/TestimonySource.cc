@@ -139,7 +139,7 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 				{
 				std::swap(packets, temp_packets);
 				queue_access_mutex.unlock();
-				return ExtractNextPacket(pkt);
+				return false;
 				}
 			queue_access_mutex.unlock();
 		}
@@ -148,9 +148,9 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 
 void TestimonySource::DoneWithPacket()
 	{
-	if ( curr_packet )
+	if ( curr_packet != NULL )
 		{
-		delete curr_packet; 				//mismatched free/delate/delate[]
+		//delete curr_packet; 				//mismatched free/delate/delate[]
 		curr_packet = NULL;
 		}
 	}
