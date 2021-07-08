@@ -103,7 +103,7 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 		while ( (packet = testimony_iter_next(td_iter)) )
 			{
 			// Queue the packet
-			char *data = new char[packet->tp_len + packet->tp_mac]; // 0 bytes alloc`d inside block of size 144 
+			char *data = (char*)malloc(packet->tp_len + packet->tp_mac); // 0 bytes alloc`d inside block of size 144 
 			memcpy(data, packet, packet->tp_len + packet->tp_mac);
 			
 			temp_packets.emplace((tpacket3_hdr *) data);
@@ -111,7 +111,6 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 			++stats.received;
 			++cnt;
 			stats.bytes_received += packet->tp_len;
-			delete[] data;  //asd
 			}
 		queue_access_mutex.unlock();
 		testimony_return_block(td, block);
@@ -121,38 +120,67 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 
 bool TestimonySource::ExtractNextPacket(Packet* pkt)
 	{
-	if ( ! packets.empty() )
+		tpacket3_hdr * tmp_packet = 0;
+		const u_char *data;
+		struct timeval tmp_timeval;
+		while (true)
 		{
-		curr_packet = packets.front();
-		packets.pop();
+			if ( ! packets.empty() )
+			{
+				queue_access_mutex.lock();
+				tmp_packet = packets.front();
+				packets.pop();
 
-		curr_timeval.tv_sec = curr_packet->tp_sec;
-		curr_timeval.tv_usec = curr_packet->tp_nsec / 1000;
-		pkt->Init(props.link_type, &curr_timeval, curr_packet->tp_snaplen, curr_packet->tp_len, (const u_char *) curr_packet + curr_packet->tp_mac);
+				tmp_timeval.tv_sec = tmp_packet->tp_sec;
+				tmp_timeval.tv_usec = tmp_packet->tp_nsec / 1000;
+				if (tmp_packet == NULL) {
+					queue_access_mutex.unlock();
 
-		return true;
-		} 
-	else 
-		{
-			queue_access_mutex.lock();
-			if(!temp_packets.empty())
+					return false;
+				}
+				data = (u_char *) tmp_packet + tmp_packet->tp_mac;
+
+				pkt->Init(props.link_type, &tmp_timeval, tmp_packet->tp_snaplen, tmp_packet->tp_len, data);
+
+				if(tmp_packet->tp_snaplen == 0 || tmp_packet->tp_len == 0) {
+					Weird("empty packet header", pkt);
+					queue_access_mutex.unlock();
+					free(tmp_packet);
+					return false;
+				}
+				free (tmp_packet);
+
+				queue_access_mutex.unlock();
+				return true;
+			} 
+			else 
+			{
+				queue_access_mutex.lock();
+				if(!temp_packets.empty())
 				{
-				std::swap(packets, temp_packets);
+					std::swap(packets, temp_packets);
+				}
 				queue_access_mutex.unlock();
 				return false;
-				}
-			queue_access_mutex.unlock();
+			}
+		
 		}
 		return false;
+	
 	}
 
 void TestimonySource::DoneWithPacket()
 	{
+		queue_access_mutex.lock();
 	if ( curr_packet != NULL )
 		{
+			//packets.pop();
+
+		//free(curr_packet);
 		//delete curr_packet; 				//mismatched free/delate/delate[]
-		curr_packet = NULL;
+		//curr_packet = NULL;
 		}
+		queue_access_mutex.unlock();
 	}
 
 bool TestimonySource::PrecompileFilter(int index, const std::string& filter)
