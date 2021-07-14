@@ -91,7 +91,7 @@ void TestimonySource::AddPacketsToTemporaryQueue()
 
 		if ( res < 0 )
 			{
-			Error("testimony_get_block:" + std::string(testimony_error(td)) + strerror(-res));
+			//Error("testimony_get_block:" + std::string(testimony_error(td)) + strerror(-res));
 			running = false;
 			Close();
 			}
@@ -123,11 +123,10 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 		tpacket3_hdr * tmp_packet = 0;
 		const u_char *data;
 		struct timeval tmp_timeval;
-		while (true)
+		while (running)
 		{
 			if ( ! packets.empty() )
 			{
-				queue_access_mutex.lock();
 				tmp_packet = packets.front();
 				packets.pop();
 
@@ -143,14 +142,13 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 				pkt->Init(props.link_type, &tmp_timeval, tmp_packet->tp_snaplen, tmp_packet->tp_len, data);
 
 				if(tmp_packet->tp_snaplen == 0 || tmp_packet->tp_len == 0) {
-					Weird("empty packet header", pkt);
+					Error("empty packet header");
 					queue_access_mutex.unlock();
 					free(tmp_packet);
 					return false;
 				}
 				free (tmp_packet);
 
-				queue_access_mutex.unlock();
 				return true;
 			} 
 			else 
@@ -161,7 +159,6 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 					std::swap(packets, temp_packets);
 				}
 				queue_access_mutex.unlock();
-				return false;
 			}
 		
 		}
@@ -171,16 +168,6 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 
 void TestimonySource::DoneWithPacket()
 	{
-		queue_access_mutex.lock();
-	if ( curr_packet != NULL )
-		{
-			//packets.pop();
-
-		//free(curr_packet);
-		//delete curr_packet; 				//mismatched free/delate/delate[]
-		//curr_packet = NULL;
-		}
-		queue_access_mutex.unlock();
 	}
 
 bool TestimonySource::PrecompileFilter(int index, const std::string& filter)
