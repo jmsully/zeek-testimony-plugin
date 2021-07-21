@@ -24,8 +24,6 @@ public:
 		{
 		props.path = path;
 		props.is_live = is_live;
-		curr_packet = NULL;
-		running = true;
 		}
 	~TestimonySource() override;
 
@@ -48,14 +46,7 @@ private:
 
 	::testimony td;
 	::testimony_iter td_iter;
-	timeval curr_timeval;
-	tpacket3_hdr *curr_packet;
-	std::queue<tpacket3_hdr *> packets;
-	std::queue<tpacket3_hdr *> temp_packets;
-
-	std::atomic<bool> running;
-	std::mutex queue_access_mutex;
-	TemporaryQueueWriter *temporary_queue_writer;
+	const tpacket_block_desc *block;
 
 	Properties props;
 	Stats stats;
