@@ -77,7 +77,7 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 
 		if ( (packet = testimony_iter_next(td_iter)) == NULL ) {
 			testimony_return_block(td, block);
-			int res = testimony_get_block(td, 0, &block);
+			int res = testimony_get_block(td, 1000, &block);
 			if ( res == 0 && !block ) {
 				// Timeout
 				continue;
