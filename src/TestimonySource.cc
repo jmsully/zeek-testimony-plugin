@@ -105,10 +105,10 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 				Error("empty packet header");
 				return false;
 			}
-			return true;
 			
 			++stats.received;
 			stats.bytes_received += packet->tp_len;
+			return true;
 		}
 		
 		
