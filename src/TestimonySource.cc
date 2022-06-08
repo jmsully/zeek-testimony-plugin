@@ -84,9 +84,9 @@ bool TestimonySource::ExtractNextPacket(Packet* pkt)
 			}
 			if ( res < 0 )
 			{
-				//Error("testimony_get_block:" + std::string(testimony_error(td)) + strerror(-res));
-				return false;
+				InternalError("testimony_get_block:" + std::string(testimony_error(td)) + strerror(-res));
 				Close();
+				return false;
 			}
 
 			testimony_iter_reset(td_iter, block);
